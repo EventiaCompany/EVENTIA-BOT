@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import {
   Crown,
@@ -70,6 +71,7 @@ export function PanelDashboard({
   permissions: Permission[];
   onLogout: () => void;
 }) {
+  const router = useRouter();
   const { data: content, mutate } = useSWR<Content>('/api/panel/content', fetcher);
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -216,10 +218,15 @@ export function PanelDashboard({
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onLogout}>
-          <LogOut className="mr-2 size-4" />
-          {content.textOverrides?.logoutButton || 'Salir'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            Volver atrás
+          </Button>
+          <Button variant="outline" size="sm" onClick={onLogout}>
+            <LogOut className="mr-2 size-4" />
+            {content.textOverrides?.logoutButton || 'Salir'}
+          </Button>
+        </div>
       </div>
 
       {/* toast */}
