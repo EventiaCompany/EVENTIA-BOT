@@ -38,7 +38,7 @@ async function migrate() {
     console.log('Inserting default content...');
 
     await db.execute(sql`
-      INSERT INTO site_content (id, site_title, site_logo_url, announcement, hero_badge, hero_title, hero_highlight, hero_subtitle, visible_sections, custom_options)
+      INSERT INTO site_content (id, site_title, site_logo_url, announcement, hero_badge, hero_title, hero_highlight, hero_subtitle, panel_title, text_overrides, visible_sections, custom_options)
       VALUES (
         1,
         'Nemo Anemo',
@@ -48,11 +48,17 @@ async function migrate() {
         'El bot de WhatsApp',
         'multidispositivo',
         'AKARI se conecta en segundos por QR o código de 8 dígitos. Sistema de plugins, sub-bots, cuentas premium y actividad 24/7 sobre una base estable en Baileys.',
+        'Panel AKARI',
+        '{}',
         '{"hero": true, "features": true, "connect": true, "tiers": true, "cta": true, "footer": true}',
         '[]'
       )
       ON CONFLICT (id) DO NOTHING;
     `);
+
+    console.log('Adding editable panel labels...');
+    await db.execute(sql`ALTER TABLE site_content ADD COLUMN IF NOT EXISTS panel_title TEXT DEFAULT 'Panel AKARI'`);
+    await db.execute(sql`ALTER TABLE site_content ADD COLUMN IF NOT EXISTS text_overrides JSONB DEFAULT '{}'`);
 
     console.log('Creating panel_secrets table...');
 

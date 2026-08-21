@@ -9,6 +9,8 @@ export const siteContent = pgTable('site_content', {
   heroTitle: text('hero_title').default('El bot de WhatsApp'),
   heroHighlight: text('hero_highlight').default('multidispositivo'),
   heroSubtitle: text('hero_subtitle').default('AKARI se conecta en segundos por QR o código de 8 dígitos. Sistema de plugins, sub-bots, cuentas premium y actividad 24/7 sobre una base estable en Baileys.'),
+  panelTitle: text('panel_title').default('Panel AKARI'),
+  textOverrides: json('text_overrides').default({}),
   visibleSections: json('visible_sections').default({
     hero: true,
     features: true,

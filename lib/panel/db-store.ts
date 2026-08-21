@@ -54,6 +54,8 @@ async function createDefaultContent() {
         heroHighlight: 'multidispositivo',
         heroSubtitle:
           'AKARI se conecta en segundos por QR o código de 8 dígitos. Sistema de plugins, sub-bots, cuentas premium y actividad 24/7 sobre una base estable en Baileys.',
+        panelTitle: 'Panel AKARI',
+        textOverrides: {},
         visibleSections: {
           hero: true,
           features: true,
@@ -78,6 +80,8 @@ async function createDefaultContent() {
         heroHighlight: 'multidispositivo',
         heroSubtitle:
           'AKARI se conecta en segundos por QR o código de 8 dígitos. Sistema de plugins, sub-bots, cuentas premium y actividad 24/7 sobre una base estable en Baileys.',
+        panelTitle: 'Panel AKARI',
+        textOverrides: {},
         visibleSections: {
           hero: true,
           features: true,

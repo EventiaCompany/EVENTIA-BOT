@@ -47,6 +47,8 @@ type Content = {
   heroTitle: string;
   heroHighlight: string;
   heroSubtitle: string;
+  panelTitle: string;
+  textOverrides: Record<string, string>;
   visibleSections: Record<string, boolean>;
   customOptions: CustomOption[];
 };
@@ -72,6 +74,7 @@ export function PanelDashboard({
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
 
   const can = (p: Permission) => permissions.includes(p);
 
@@ -207,7 +210,7 @@ export function PanelDashboard({
             <Crown className="size-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold">Panel AKARI</h1>
+            <h1 className="text-2xl font-display font-bold">{content.panelTitle || 'Panel AKARI'}</h1>
             <p className="text-sm text-muted-foreground">
               {ROLE_LABEL[role]} • {content.siteTitle}
             </p>
@@ -215,7 +218,7 @@ export function PanelDashboard({
         </div>
         <Button variant="outline" size="sm" onClick={onLogout}>
           <LogOut className="mr-2 size-4" />
-          Salir
+          {content.textOverrides?.logoutButton || 'Salir'}
         </Button>
       </div>
 
@@ -232,7 +235,7 @@ export function PanelDashboard({
           <section className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Configuración del Sitio</h2>
+              <h2 className="text-lg font-semibold">{content.textOverrides?.siteSettingsTitle || 'Configuración del Sitio'}</h2>
             </div>
 
             <div className="space-y-4">
@@ -298,7 +301,7 @@ export function PanelDashboard({
 
               {/* Hero Settings */}
               <div className="pt-4 border-t border-border">
-                <h3 className="font-semibold text-sm mb-3">Configuración del Hero</h3>
+                <h3 className="font-semibold text-sm mb-3">{content.textOverrides?.heroSettingsTitle || 'Configuración del Hero'}</h3>
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">
@@ -499,7 +502,7 @@ export function PanelDashboard({
               <div>
                 <div className="flex items-center gap-2">
                   <PlusCircle className="size-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Opciones personalizadas</h2>
+                  <h2 className="text-lg font-semibold">{content.textOverrides?.customOptionsTitle || 'Opciones personalizadas'}</h2>
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Crea tarjetas para ventas, suscripciones, canales de WhatsApp,
@@ -724,12 +727,79 @@ export function PanelDashboard({
           </section>
         )}
 
+        {/* Owner: Panel and interface text */}
+        {can('site_settings') && (
+          <section className="rounded-lg border border-border bg-card p-6">
+            <div className="mb-1 flex items-center gap-2">
+              <LayoutTemplate className="size-5 text-primary" />
+              <h2 className="text-lg font-semibold">Textos y nombres del panel</h2>
+            </div>
+            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">
+              Cambia títulos, etiquetas y textos visibles sin editar el código. Los campos vacíos usan el texto predeterminado.
+            </p>
+            <div className="flex flex-col gap-4">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">Nombre del panel</span>
+                <input
+                  value={content.panelTitle || ''}
+                  onChange={(e) => mutate({ ...content, panelTitle: e.target.value }, false)}
+                  placeholder="Panel AKARI"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+                <Button
+                  className="mt-1 self-start"
+                  size="sm"
+                  onClick={() => save({ panelTitle: content.panelTitle }, 'Nombre del panel')}
+                  disabled={saving === 'Nombre del panel'}
+                >
+                  <Save className="mr-2 size-4" /> Guardar nombre
+                </Button>
+              </label>
+
+              <div className="border-t border-border pt-4">
+                <p className="mb-3 text-sm font-semibold">Textos del panel</p>
+                <div className="flex flex-col gap-3">
+                  {[
+                    ['siteSettingsTitle', 'Título de configuración del sitio', 'Configuración del Sitio'],
+                    ['heroSettingsTitle', 'Título de configuración del hero', 'Configuración del Hero'],
+                    ['customOptionsTitle', 'Título de opciones personalizadas', 'Opciones personalizadas'],
+                    ['systemTitle', 'Título del sistema', 'Sistema'],
+                    ['saveButton', 'Texto de botones guardar', 'Guardar'],
+                    ['logoutButton', 'Texto del botón salir', 'Salir'],
+                  ].map(([key, label, fallback]) => (
+                    <label key={key} className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+                      <input
+                        value={labelDrafts[key] ?? content.textOverrides?.[key] ?? ''}
+                        onChange={(e) => setLabelDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={fallback}
+                        className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <Button
+                  className="mt-4"
+                  onClick={() => {
+                    const textOverrides = { ...content.textOverrides, ...labelDrafts };
+                    void save({ textOverrides }, 'Textos del panel');
+                    setLabelDrafts({});
+                  }}
+                  disabled={saving === 'Textos del panel'}
+                >
+                  <Save className="mr-2 size-4" /> Guardar textos
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Owner/Developer: System */}
         {can('system') && (
           <section className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <Server className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Sistema</h2>
+              <h2 className="text-lg font-semibold">{content.textOverrides?.systemTitle || 'Sistema'}</h2>
             </div>
 
             <div className="text-sm text-muted-foreground space-y-2">
