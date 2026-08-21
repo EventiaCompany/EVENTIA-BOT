@@ -27,6 +27,30 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const updates: Record<string, any> = {};
 
+    if (body.customOptions !== undefined) {
+      if (!Array.isArray(body.customOptions) || body.customOptions.length > 30) {
+        return NextResponse.json({ error: 'Invalid custom options' }, { status: 400 });
+      }
+      updates.customOptions = body.customOptions.map((item: any) => {
+        const url = typeof item.url === 'string' ? item.url.trim() : '';
+        if (url) {
+          const parsed = new URL(url);
+          if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Invalid URL');
+        }
+        return {
+          id: String(item.id || crypto.randomUUID()).slice(0, 100),
+          title: String(item.title || '').slice(0, 120),
+          description: String(item.description || '').slice(0, 1000),
+          url: url.slice(0, 1000),
+          imageUrl: String(item.imageUrl || '').slice(0, 2000),
+          category: String(item.category || '').slice(0, 80),
+          price: String(item.price || '').slice(0, 80),
+          ctaLabel: String(item.ctaLabel || 'Ver más').slice(0, 60),
+          active: item.active !== false,
+        };
+      });
+    }
+
     // Owner: acceso total a todos los campos
     if (role === 'owner') {
       if (body.siteTitle !== undefined) updates.siteTitle = body.siteTitle;

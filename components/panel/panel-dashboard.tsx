@@ -27,6 +27,18 @@ type Permission =
 
 type Role = 'owner' | 'admin' | 'developer';
 
+type CustomOption = {
+  id: string;
+  title: string;
+  description: string;
+  url?: string;
+  imageUrl?: string;
+  category?: string;
+  price?: string;
+  ctaLabel?: string;
+  active?: boolean;
+};
+
 type Content = {
   siteTitle: string;
   siteLogoUrl: string | null;
@@ -36,7 +48,7 @@ type Content = {
   heroHighlight: string;
   heroSubtitle: string;
   visibleSections: Record<string, boolean>;
-  customOptions: Array<{ id: string; title: string; description: string }>;
+  customOptions: CustomOption[];
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -117,6 +129,39 @@ export function PanelDashboard({
       }
     } finally {
       setSaving(null);
+    }
+  }
+
+  function createOption(): CustomOption {
+    return {
+      id: crypto.randomUUID(),
+      title: 'Nueva opción',
+      description: 'Describe aquí tu servicio, canal, suscripción o sitio web.',
+      url: '',
+      imageUrl: '',
+      category: 'Servicio',
+      price: '',
+      ctaLabel: 'Ver más',
+      active: true,
+    };
+  }
+
+  async function uploadOptionImage(file: File, optionId: string) {
+    if (!content) return;
+    setUploading(`option-${optionId}`);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'custom');
+      const res = await fetch('/api/panel/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = await res.json();
+      const customOptions = content.customOptions.map((option) =>
+        option.id === optionId ? { ...option, imageUrl: url } : option
+      );
+      await save({ customOptions }, 'option-image');
+    } finally {
+      setUploading(null);
     }
   }
 
@@ -447,25 +492,169 @@ export function PanelDashboard({
           </section>
         )}
 
-        {/* Admin: Custom Options */}
+        {/* Admin/Owner: Custom options */}
         {can('cards') && (
           <section className="rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <PlusCircle className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Opciones Personalizadas</h2>
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <PlusCircle className="size-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Opciones personalizadas</h2>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Crea tarjetas para ventas, suscripciones, canales de WhatsApp,
+                  comunidades, servicios o cualquier sitio externo.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  mutate(
+                    { ...content, customOptions: [...content.customOptions, createOption()] },
+                    false
+                  )
+                }
+              >
+                <PlusCircle className="mr-2 size-4" /> Añadir
+              </Button>
             </div>
 
-            <div className="space-y-3">
-              {content.customOptions.map((card) => (
-                <div key={card.id} className="p-3 rounded-lg border border-border bg-background/50">
-                  <p className="font-semibold text-sm">{card.title}</p>
-                  <p className="text-xs text-muted-foreground">{card.description}</p>
+            <div className="space-y-4">
+              {content.customOptions.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  Aún no hay opciones. Añade la primera tarjeta.
+                </div>
+              )}
+              {content.customOptions.map((option, index) => (
+                <div key={option.id} className="rounded-xl border border-border bg-background/50 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Tarjeta {index + 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={option.active !== false}
+                          onChange={(e) =>
+                            mutate(
+                              {
+                                ...content,
+                                customOptions: content.customOptions.map((item) =>
+                                  item.id === option.id ? { ...item, active: e.target.checked } : item
+                                ),
+                              },
+                              false
+                            )
+                          }
+                        /> Visible
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          mutate(
+                            {
+                              ...content,
+                              customOptions: content.customOptions.filter((item) => item.id !== option.id),
+                            },
+                            false
+                          )
+                        }
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {([
+                      ['title', 'Nombre o título', 'Ej. Suscripción Premium'],
+                      ['category', 'Categoría', 'Ej. Canal de WhatsApp'],
+                      ['price', 'Precio o etiqueta', 'Ej. Desde $5 / Gratis'],
+                      ['ctaLabel', 'Texto del botón', 'Ej. Comprar ahora'],
+                      ['url', 'URL de destino', 'https://...'],
+                    ] as const).map(([field, label, placeholder]) => (
+                      <label key={field} className={field === 'url' ? 'sm:col-span-2' : ''}>
+                        <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
+                        <input
+                          value={option[field] ?? ''}
+                          placeholder={placeholder}
+                          onChange={(e) =>
+                            mutate(
+                              {
+                                ...content,
+                                customOptions: content.customOptions.map((item) =>
+                                  item.id === option.id ? { ...item, [field]: e.target.value } : item
+                                ),
+                              },
+                              false
+                            )
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+                      </label>
+                    ))}
+                    <label className="sm:col-span-2">
+                      <span className="mb-1 block text-xs font-medium text-muted-foreground">Descripción</span>
+                      <textarea
+                        value={option.description}
+                        rows={3}
+                        placeholder="Explica qué ofrece esta opción"
+                        onChange={(e) =>
+                          mutate(
+                            {
+                              ...content,
+                              customOptions: content.customOptions.map((item) =>
+                                item.id === option.id ? { ...item, description: e.target.value } : item
+                              ),
+                            },
+                            false
+                          )
+                        }
+                        className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-3">
+                    <div className="flex items-center gap-3">
+                      {option.imageUrl ? (
+                        <img src={option.imageUrl} alt="Vista previa" className="size-12 rounded-lg object-cover" />
+                      ) : (
+                        <div className="flex size-12 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+                          <ImageIcon className="size-5" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">Imagen de la tarjeta</p>
+                        <p className="text-xs text-muted-foreground">Se guarda en Vercel Blob</p>
+                      </div>
+                    </div>
+                    <label className="cursor-pointer rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-secondary">
+                      {uploading === `option-${option.id}` ? 'Subiendo...' : 'Subir imagen'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void uploadOptionImage(file, option.id);
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <Button
+                    className="mt-4 w-full"
+                    onClick={() => save({ customOptions: content.customOptions }, `option-${option.id}`)}
+                    disabled={saving === `option-${option.id}`}
+                  >
+                    <Save className="mr-2 size-4" /> Guardar esta tarjeta
+                  </Button>
                 </div>
               ))}
-              <Button variant="outline" className="w-full" disabled>
-                <PlusCircle className="mr-2 size-4" />
-                Agregar opción (próximamente)
-              </Button>
             </div>
           </section>
         )}

@@ -12,7 +12,7 @@ if (!databaseUrl) {
 
 async function migrate() {
   try {
-    const client = postgres(databaseUrl);
+    const client = postgres(databaseUrl as string);
     const db = drizzle(client);
 
     console.log('Creating site_content table...');

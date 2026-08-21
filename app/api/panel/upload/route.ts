@@ -5,7 +5,7 @@ import { put } from '@vercel/blob';
 
 export async function POST(req: NextRequest) {
   try {
-    const { role, user } = await verifyAuth(req);
+    const { role } = await verifyAuth(req);
 
     if (!role) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
